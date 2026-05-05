@@ -6,7 +6,7 @@ const winston = require('winston');
 const auth = require('./middlewares/auth');
 
 const app = express();
-app.use(express.json());
+app.use('/auth', express.json());
 
 // Logger centralizado
 const logger = winston.createLogger({
@@ -35,44 +35,35 @@ app.use((req, _, next) => {
 // Ruta publica: login (NO requiere JWT)
 app.use('/auth/login', require('./routes/auth'));
 
-// Funcion auxiliar para crear opciones del proxy
-const proxyOpts = (target, name) => ({
-    target,
-    changeOrigin: true,
-    on: {
-        error: (err, req, res) => {
-            logger.error(`[${name}] ${err.message}`);
-            res.status(503).json({
-                error: `Servicio ${name} no disponible`,
-                detalle: err.message
-            });
-        }
-    }
-});
-
 // Rutas protegidas: redirigen al servicio correspondiente
+// EMPLEADOS
 app.use('/api/empleados',
     auth,
-    createProxyMiddleware(proxyOpts(
-        process.env.EMPLEADOS_URL || 'http://localhost:3001',
-        'Empleados'
-    ))
+    createProxyMiddleware({
+        target: process.env.EMPLEADOS_URL || 'http://localhost:3001',
+        changeOrigin: true,
+        pathRewrite: { '^/': '/empleados/' }
+    })
 );
 
+// NOMINA
 app.use('/api/nomina',
     auth,
-    createProxyMiddleware(proxyOpts(
-        process.env.NOMINA_URL || 'http://localhost:3002',
-        'Nomina'
-    ))
+    createProxyMiddleware({
+        target: process.env.NOMINA_URL || 'http://localhost:3002',
+        changeOrigin: true,
+        pathRewrite: { '^/': '/nomina/' }
+    })
 );
 
+// RECLUTAMIENTO
 app.use('/api/reclutamiento',
     auth,
-    createProxyMiddleware(proxyOpts(
-        process.env.RECLUTAMIENTO_URL || 'http://localhost:3003',
-        'Reclutamiento'
-    ))
+    createProxyMiddleware({
+        target: process.env.RECLUTAMIENTO_URL || 'http://localhost:3003',
+        changeOrigin: true,
+        pathRewrite: { '^/': '/reclutamiento/' }
+    })
 );
 
 // Health check: verifica que el gateway esta vivo
